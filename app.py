@@ -3,10 +3,12 @@ import sqlite3
 
 app = Flask(__name__)
 
+
 def get_db_connection():
     conn = sqlite3.connect('library.db')
     conn.row_factory = sqlite3.Row
     return conn
+
 
 @app.route('/books', methods=['GET'])
 def get_books():
@@ -35,6 +37,26 @@ def get_books():
     return jsonify([dict(book) for book in books])
 
 
+@app.route('/books/<int:id>', methods=['GET'])
+def get_book(id):
+    conn = get_db_connection()
+    book = conn.execute(
+        '''
+        SELECT b.id, b.title, b.genre, b.year, b.author_id,
+               a.name AS author_name
+        FROM books b
+        LEFT JOIN authors a ON a.id = b.author_id
+        WHERE b.id = ?
+        ''',
+        (id,),
+    ).fetchone()
+    conn.close()
 
-if __name__ == '__main__':
+    if book is None:
+        return jsonify({'error': 'Книга не найдена'}), 404
+
+    return jsonify(dict(book))
+
+
+if __name__ == '__main__':  
     app.run(debug=True)
