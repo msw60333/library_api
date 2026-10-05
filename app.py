@@ -58,5 +58,33 @@ def get_book(id):
     return jsonify(dict(book))
 
 
+@app.route('/loans' , methods=['POST'])
+def create_loan():
+    data = request.get_json()
+    book_id = data.get('book_id')
+    reader_name = data.get('reader_name')
+    loan_date = data.get('loan_date')
+
+    if not book_id or not reader_name or not loan_date:
+        return jsonify({'error': 'Недостаточно данных для создания записи о выдаче'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Проверяем, существует ли книга с указанным book_id
+    book = cursor.execute('SELECT * FROM books WHERE id = ?', (book_id,)).fetchone()
+    if book is None:
+        conn.close()
+        return jsonify({'error': 'Книга с указанным ID не найдена'}), 404
+
+    cursor.execute(
+        'INSERT INTO loans (book_id, reader_name, loan_date) VALUES (?, ?, ?)',
+        (book_id, reader_name, loan_date)
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Запись о выдаче успешно создана'}), 201
+
 if __name__ == '__main__':  
     app.run(debug=True)
